@@ -561,6 +561,7 @@ private fun GenreCard(preset: GenrePreset, selected: Boolean, onClick: () -> Uni
 fun ModelSelectPage(
     state: WizardUiState,
     onOverride: (ModelRole, String?) -> Unit,
+    onDownload: (String) -> Unit,
     onShowAlternatives: (ModelRole) -> Unit
 ) {
     val config = state.currentConfig
@@ -605,6 +606,7 @@ fun ModelSelectPage(
                         onOverride(role, newId)
                         expandedRole = null
                     },
+                    onDownload = { onDownload(modelId) },
                     alternatives = state.availableModels.filter { it.role == role }
                 )
             }
@@ -622,28 +624,45 @@ private fun ModelRoleCard(
     isExpanded: Boolean,
     onExpandToggle: () -> Unit,
     onOverride: (String?) -> Unit,
+    onDownload: () -> Unit,
     alternatives: List<ModelAsset>
 ) {
+    val state: DownloadState = status?.state ?: DownloadState.Idle
+    val isBundled = asset?.bundled == true
+
     Card(
         shape = RoundedCornerShape(xxl),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(lg)) {
+            // Top row: status icon + name + role + replace button
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = CircleShape,
-                    color = if (isAvailable) MaterialTheme.colorScheme.tertiaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant,
+                    color = when {
+                        state is DownloadState.Completed -> MaterialTheme.colorScheme.tertiaryContainer
+                        state is DownloadState.Downloading -> MaterialTheme.colorScheme.primaryContainer
+                        state is DownloadState.Failed -> MaterialTheme.colorScheme.errorContainer
+                        isAvailable || isBundled -> MaterialTheme.colorScheme.tertiaryContainer
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            if (isAvailable) Icons.Default.Check else Icons.Default.Downloading,
-                            contentDescription = null,
-                            tint = if (isAvailable) MaterialTheme.colorScheme.onTertiaryContainer
-                                   else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        val icon = when {
+                            state is DownloadState.Completed || isAvailable || isBundled -> Icons.Default.Check
+                            state is DownloadState.Downloading -> Icons.Default.Downloading
+                            state is DownloadState.Failed -> Icons.Default.ErrorOutline
+                            else -> Icons.Default.Download
+                        }
+                        val iconColor = when {
+                            state is DownloadState.Completed || isAvailable || isBundled -> MaterialTheme.colorScheme.onTertiaryContainer
+                            state is DownloadState.Downloading -> MaterialTheme.colorScheme.onPrimaryContainer
+                            state is DownloadState.Failed -> MaterialTheme.colorScheme.onErrorContainer
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                        Icon(icon, contentDescription = null,
+                             tint = iconColor, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(Modifier.width(md))
@@ -654,18 +673,31 @@ private fun ModelRoleCard(
                     Text(roleLabel(role),
                          style = MaterialTheme.typography.labelSmall,
                          color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    status?.let { DownloadStatusBadge(it) }
                 }
-                TextButton(onClick = onExpandToggle) {
-                    Text(if (isExpanded) "收起" else "更换")
-                    Spacer(Modifier.width(xs))
-                    Icon(if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                         contentDescription = null)
+                if (asset != null && !isBundled) {
+                    TextButton(onClick = onExpandToggle) {
+                        Text(if (isExpanded) "收起" else "更换")
+                        Spacer(Modifier.width(xs))
+                        Icon(if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                             contentDescription = null)
+                    }
                 }
             }
 
-            if (isExpanded) {
-                HorizontalDivider(Modifier.padding(vertical = md))
+            Spacer(Modifier.height(md))
+
+            // Status / download section (only for non-bundled models)
+            if (!isBundled) {
+                DownloadStatusSection(
+                    state = state,
+                    asset = asset,
+                    onDownload = onDownload
+                )
+                if (isExpanded) HorizontalDivider(Modifier.padding(vertical = md))
+            }
+
+            // Alternatives list (when expanded)
+            if (isExpanded && !isBundled) {
                 alternatives.forEach { alt ->
                     Row(
                         modifier = Modifier
@@ -682,7 +714,7 @@ private fun ModelRoleCard(
                         Column(Modifier.weight(1f)) {
                             Text(alt.displayName, style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                "${alt.sizeBytes / 1_000_000} MB · ${alt.genreTags.joinToString(", ") }",
+                                "${alt.sizeBytes / 1_000_000} MB · ${alt.genreTags.joinToString(", ")}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -701,23 +733,201 @@ private fun ModelRoleCard(
 }
 
 @Composable
-private fun DownloadStatusBadge(status: ModelStatus) {
-    val (color, text) = when (val st = status.state) {
-        is DownloadState.Idle -> MaterialTheme.colorScheme.surfaceVariant to "待下载"
-        is DownloadState.Downloading -> {
-            val pct = if (st.totalBytes > 0) (st.bytesDownloaded * 100 / st.totalBytes) else 0
-            MaterialTheme.colorScheme.primaryContainer to "下载中 $pct%"
+private fun DownloadStatusSection(
+    state: DownloadState,
+    asset: ModelAsset?,
+    onDownload: () -> Unit
+) {
+    when (state) {
+        is DownloadState.Idle -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("待下载", style = MaterialTheme.typography.bodyMedium,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    asset?.let {
+                        Text("${it.sizeBytes / 1_000_000} MB",
+                             style = MaterialTheme.typography.labelSmall,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Button(onClick = onDownload, shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(xs))
+                    Text("下载")
+                }
+            }
         }
-        is DownloadState.Verifying -> MaterialTheme.colorScheme.tertiaryContainer to "校验中"
-        is DownloadState.Completed -> MaterialTheme.colorScheme.secondaryContainer to "已就绪"
-        is DownloadState.Failed -> MaterialTheme.colorScheme.errorContainer to "失败"
-        is DownloadState.Cancelled -> MaterialTheme.colorScheme.surfaceVariant to "已取消"
+
+        is DownloadState.Downloading -> {
+            val pct = if (state.totalBytes > 0)
+                (state.bytesDownloaded.toFloat() / state.totalBytes)
+            else 0f
+            val downloadedMb = state.bytesDownloaded / 1048576.0
+            val totalMb = if (state.totalBytes > 0) state.totalBytes / 1048576.0 else 0.0
+            val bpsKb = state.bytesPerSecond / 1024.0
+            val etaSec = if (state.bytesPerSecond > 0)
+                (state.totalBytes - state.bytesDownloaded) / state.bytesPerSecond
+            else 0L
+
+            Column(verticalArrangement = Arrangement.spacedBy(xs)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("下载中 · ${state.sourceType}",
+                         style = MaterialTheme.typography.labelMedium,
+                         color = MaterialTheme.colorScheme.primary,
+                         fontWeight = FontWeight.SemiBold)
+                    Text("${(pct * 100).toInt()}%",
+                         style = MaterialTheme.typography.labelMedium,
+                         fontWeight = FontWeight.SemiBold)
+                }
+                LinearProgressIndicator(
+                    progress = { pct },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("${String.format("%.1f", downloadedMb)} / ${String.format("%.1f", totalMb)} MB",
+                         style = MaterialTheme.typography.labelSmall,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (bpsKb > 0) {
+                        Text("${String.format("%.0f", bpsKb)} KB/s" +
+                             (if (etaSec > 0 && state.totalBytes > 0)
+                                 " · ETA ${humanizeSeconds(etaSec)}" else ""),
+                             style = MaterialTheme.typography.labelSmall,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
+        is DownloadState.Verifying -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(Modifier.width(sm))
+                Text("校验完整性中…",
+                     style = MaterialTheme.typography.bodyMedium,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        is DownloadState.Completed -> {
+            Surface(
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                shape = RoundedCornerShape(50)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = md, vertical = xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(xs))
+                    Text("已就绪",
+                         style = MaterialTheme.typography.labelMedium,
+                         color = MaterialTheme.colorScheme.onTertiaryContainer,
+                         fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        is DownloadState.Failed -> {
+            var showErrorDetail by remember { mutableStateOf(false) }
+            Column(verticalArrangement = Arrangement.spacedBy(sm)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Text(
+                            "失败：${state.errors.size} 个源",
+                            modifier = Modifier.padding(horizontal = md, vertical = xs),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Button(onClick = onDownload, shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(xs))
+                        Text("重试")
+                    }
+                }
+                TextButton(onClick = { showErrorDetail = !showErrorDetail }) {
+                    Icon(if (showErrorDetail) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                         contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(xs))
+                    Text(if (showErrorDetail) "隐藏错误详情" else "查看错误详情")
+                }
+                if (showErrorDetail) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(Modifier.padding(md), verticalArrangement = Arrangement.spacedBy(md)) {
+                            state.errors.forEachIndexed { idx, err ->
+                                Column {
+                                    Text("#${idx + 1}  ${err.source.type}  (${err.source.region})",
+                                         style = MaterialTheme.typography.labelMedium,
+                                         fontWeight = FontWeight.SemiBold,
+                                         color = MaterialTheme.colorScheme.onErrorContainer)
+                                    Text(
+                                        text = err.source.url,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(Modifier.height(xs))
+                                    Text("原因：${err.reason}",
+                                         style = MaterialTheme.typography.bodySmall,
+                                         color = MaterialTheme.colorScheme.onErrorContainer)
+                                    err.cause?.message?.let {
+                                        Text("底层异常：$it",
+                                             style = MaterialTheme.typography.labelSmall,
+                                             color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        is DownloadState.Cancelled -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("已取消", Modifier.weight(1f),
+                     style = MaterialTheme.typography.bodyMedium,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = onDownload, shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(xs))
+                    Text("重新下载")
+                }
+            }
+        }
     }
-    Surface(color = color, shape = RoundedCornerShape(50)) {
-        Text(text,
-             modifier = Modifier.padding(horizontal = sm, vertical = xs / 2),
-             style = MaterialTheme.typography.labelSmall)
-    }
+}
+
+private fun humanizeSeconds(sec: Long): String {
+    if (sec < 1) return "<1秒"
+    if (sec < 60) return "${sec}秒"
+    val m = sec / 60
+    val s = sec % 60
+    return "${m}分${s}秒"
 }
 
 private fun roleLabel(role: ModelRole): String = when (role) {

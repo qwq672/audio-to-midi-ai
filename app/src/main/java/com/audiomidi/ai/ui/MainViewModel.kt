@@ -174,6 +174,57 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(currentConfig = updated) }
     }
 
+    // ---------- Manual model management ----------
+
+    /**
+     * Manually trigger download of a specific model. Used by the Download
+     * button shown next to each model in ModelSelectPage.
+     */
+    fun downloadModel(modelId: String) {
+        val app = appRef ?: return
+        val asset = app.registry?.byId(modelId) ?: return
+        if (app.modelManager.isAvailable(asset)) return  // already there
+        if (asset.bundled) {
+            // Bundled assets shouldn't need downloading — surface as error
+            _uiState.update {
+                it.copy(errorMessage = "${asset.displayName} marked as bundled but file not found. " +
+                    "Check app/src/main/assets/ contains ${asset.id}.onnx")
+            }
+            return
+        }
+        viewModelScope.launch {
+            app.modelManager.ensureDownloaded(asset)
+        }
+    }
+
+    /**
+     * Retry a failed download — same as downloadModel since ensureDownloaded
+     * clears the failure state internally.
+     */
+    fun retryDownload(modelId: String) = downloadModel(modelId)
+
+    /**
+     * Cancel any in-progress download for a model. Currently a stub —
+     * requires OkHttp Call.cancel() plumbing.
+     */
+    fun cancelDownload(modelId: String) {
+        // TODO: implement via Downloader.cancelDownload(modelId)
+    }
+
+    /**
+     * Delete a model file from local storage to free space.
+     */
+    fun deleteModel(modelId: String) {
+        val app = appRef ?: return
+        val asset = app.registry?.byId(modelId) ?: return
+        if (app.modelManager.delete(asset)) {
+            // Remove from statuses too
+            _uiState.update { current ->
+                current.copy(modelStatuses = current.modelStatuses - modelId)
+            }
+        }
+    }
+
     // ---------- Audio selection ----------
 
     fun setSelectedAudioUris(uris: List<Uri>) {

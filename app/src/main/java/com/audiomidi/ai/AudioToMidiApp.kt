@@ -109,6 +109,9 @@ class AudioToMidiApp : Application() {
             val loadedPresets = GenrePresetRegistry.load(this@AudioToMidiApp)
             registry = loadedRegistry
             presets = loadedPresets
+            // Critical: update the executor's registry too, otherwise run()
+            // still uses the empty placeholder and throws "Unknown model id".
+            pipelineExecutor.registry = loadedRegistry
             _isReady.value = true
             Timber.i("Loaded ${loadedRegistry.all().size} models and ${loadedPresets.presets.size} presets")
 

@@ -120,6 +120,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     WizardStep.MODEL_SELECT -> ModelSelectPage(
                         state = state,
                         onOverride = viewModel::overrideModel,
+                        onDownload = viewModel::downloadModel,
                         onShowAlternatives = { }
                     )
                     WizardStep.AUDIO_SELECT -> AudioSelectPage(

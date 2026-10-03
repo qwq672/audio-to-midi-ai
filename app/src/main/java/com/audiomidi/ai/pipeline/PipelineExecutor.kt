@@ -49,10 +49,16 @@ sealed class PipelineStage {
  * The executor is intentionally model-agnostic: it only knows the interfaces
  * defined in PipelineInterfaces.kt. New model implementations can be dropped
  * in without changing the executor.
+ *
+ * NOTE: [registry] is `var` (not `val`) because it's loaded asynchronously
+ * from assets. AudioToMidiApp initializes PipelineExecutor with a
+ * placeholder (empty) registry and assigns the real one once
+ * ModelRegistry.load() completes. This avoids the "Unknown model id"
+ * error when run() is called before async load finishes.
  */
 class PipelineExecutor(
     private val modelManager: ModelManager,
-    private val registry: ModelRegistry,
+    var registry: ModelRegistry,
     private val separatorFactory: (String) -> SourceSeparator,
     private val transcriberFactory: (String) -> Transcriber,
     private val classifierFactory: (String) -> InstrumentClassifier,
