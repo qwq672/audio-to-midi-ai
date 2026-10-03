@@ -1,6 +1,8 @@
 package com.audiomidi.ai.ui
 
+import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.audiomidi.ai.AudioToMidiApp
@@ -14,11 +16,12 @@ import com.audiomidi.ai.model.DownloadState
 import com.audiomidi.ai.model.ModelStatus
 import com.audiomidi.ai.pipeline.AudioData
 import com.audiomidi.ai.pipeline.PipelineStage
+import com.audiomidi.ai.util.MidiOutput
+import com.audiomidi.ai.util.MidiStorageWriter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -29,31 +32,26 @@ data class WizardUiState(
     val isReady: Boolean = false,
     val isLoading: Boolean = true,
 
-    // Home / Settings
     val settings: UserSettings = UserSettings(),
 
-    // Genre selection
     val availablePresets: List<GenrePreset> = emptyList(),
     val selectedGenreId: String = "pop",
 
-    // Model selection
     val availableModels: List<ModelAsset> = emptyList(),
     val currentConfig: PipelineConfig? = null,
     val modelStatuses: Map<String, ModelStatus> = emptyMap(),
 
-    // Audio selection
     val selectedAudioUris: List<Uri> = emptyList(),
     val conversionCount: Int = 1,
     val migrateMetadata: Boolean = true,
 
-    // Processing
     val isProcessing: Boolean = false,
     val processingProgress: Float = 0f,
     val currentPipelineStage: PipelineStage? = null,
     val processingJob: Job? = null,
 
-    // Complete
-    val outputMidiPaths: List<String> = emptyList(),
+    // Real URIs from MediaStore, shareable with other apps
+    val outputMidiFiles: List<MidiOutput> = emptyList(),
     val errorMessage: String? = null
 )
 
@@ -66,20 +64,17 @@ class MainViewModel : ViewModel() {
 
     fun bind(app: AudioToMidiApp) {
         this.appRef = app
-        // Observe readiness — refresh UI when presets/registry become available.
         viewModelScope.launch {
             app.isReady.collect { ready ->
                 _uiState.update { it.copy(isReady = ready, isLoading = !ready) }
                 if (ready) refreshAfterLoad()
             }
         }
-        // Subscribe to download events
         viewModelScope.launch {
             app.modelManager.downloadEvents.collect { (modelId, state) ->
                 updateModelStatus(modelId, state)
             }
         }
-        // Subscribe to pipeline stages
         viewModelScope.launch {
             app.pipelineExecutor.stages.collect { stage ->
                 _uiState.update { it.copy(currentPipelineStage = stage) }
@@ -120,7 +115,6 @@ class MainViewModel : ViewModel() {
 
     fun updateSettings(settings: UserSettings) {
         _uiState.update { it.copy(settings = settings) }
-        // In production, persist via DataStore
     }
 
     fun setDownloadRegion(region: DownloadRegion) {
@@ -176,16 +170,11 @@ class MainViewModel : ViewModel() {
 
     // ---------- Manual model management ----------
 
-    /**
-     * Manually trigger download of a specific model. Used by the Download
-     * button shown next to each model in ModelSelectPage.
-     */
     fun downloadModel(modelId: String) {
         val app = appRef ?: return
         val asset = app.registry?.byId(modelId) ?: return
-        if (app.modelManager.isAvailable(asset)) return  // already there
+        if (app.modelManager.isAvailable(asset)) return
         if (asset.bundled) {
-            // Bundled assets shouldn't need downloading — surface as error
             _uiState.update {
                 it.copy(errorMessage = "${asset.displayName} marked as bundled but file not found. " +
                     "Check app/src/main/assets/ contains ${asset.id}.onnx")
@@ -197,28 +186,16 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Retry a failed download — same as downloadModel since ensureDownloaded
-     * clears the failure state internally.
-     */
     fun retryDownload(modelId: String) = downloadModel(modelId)
 
-    /**
-     * Cancel any in-progress download for a model. Currently a stub —
-     * requires OkHttp Call.cancel() plumbing.
-     */
     fun cancelDownload(modelId: String) {
         // TODO: implement via Downloader.cancelDownload(modelId)
     }
 
-    /**
-     * Delete a model file from local storage to free space.
-     */
     fun deleteModel(modelId: String) {
         val app = appRef ?: return
         val asset = app.registry?.byId(modelId) ?: return
         if (app.modelManager.delete(asset)) {
-            // Remove from statuses too
             _uiState.update { current ->
                 current.copy(modelStatuses = current.modelStatuses - modelId)
             }
@@ -264,15 +241,14 @@ class MainViewModel : ViewModel() {
             it.copy(
                 isProcessing = true,
                 errorMessage = null,
-                outputMidiPaths = emptyList(),
+                outputMidiFiles = emptyList(),
                 processingProgress = 0f
             )
         }
         val job = viewModelScope.launch {
-            val outputs = mutableListOf<String>()
-            for (uri in uris) {
+            val outputs = mutableListOf<MidiOutput>()
+            for ((idx, uri) in uris.withIndex()) {
                 // TODO: decode audio from uri to AudioData
-                // For now: placeholder empty audio to show the pipeline wiring
                 val audio = AudioData(sampleRate = 44100, channels = 2, samples = FloatArray(0))
                 val result = app.pipelineExecutor.run(audio, config)
                 if (result.isFailure) {
@@ -280,17 +256,26 @@ class MainViewModel : ViewModel() {
                     _uiState.update { it.copy(errorMessage = err) }
                     break
                 }
-                val (_, _) = result.getOrThrow()
-                // TODO: write midiBytes to Downloads/AudioToMidi/<uri_last_segment>.mid
-                //       if migrateMetadata is true, also embed ID3 tag info as text events
-                val outName = "output_${System.currentTimeMillis()}.mid"
-                outputs.add("Downloads/AudioToMidi/$outName")
+                val (midiBytes, _) = result.getOrThrow()
+
+                // Actually write MIDI bytes to user-accessible storage
+                // (Download/AudioToMidi/<source>_<idx>.mid)
+                val sourceName = uri.lastPathSegment?.substringBeforeLast('.') ?: "audio"
+                val outName = "${sourceName}_${idx + 1}.mid"
+                val output = MidiStorageWriter.write(app, outName, midiBytes)
+                if (output == null) {
+                    _uiState.update {
+                        it.copy(errorMessage = "Failed to write MIDI file: $outName")
+                    }
+                    break
+                }
+                outputs.add(output)
             }
             _uiState.update {
                 it.copy(
                     isProcessing = false,
                     processingProgress = 1f,
-                    outputMidiPaths = outputs,
+                    outputMidiFiles = outputs,
                     currentStep = WizardStep.COMPLETE
                 )
             }
@@ -307,6 +292,85 @@ class MainViewModel : ViewModel() {
                 currentStep = WizardStep.AUDIO_SELECT,
                 errorMessage = "用户取消"
             )
+        }
+    }
+
+    // ---------- MIDI file actions (listen / share) ----------
+
+    /**
+     * Open MIDI file with an external app via ACTION_VIEW intent.
+     * Falls back from audio/midi to audio/x-midi MIME type if no app handles it.
+     */
+    fun listenToMidi(output: MidiOutput) {
+        val app = appRef ?: return
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(output.uri, "audio/midi")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val chooser = Intent.createChooser(intent, "用…打开 ${output.displayName}")
+            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        try {
+            app.startActivity(chooser)
+        } catch (e: Exception) {
+            // Try fallback MIME type
+            val fallback = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(output.uri, "audio/x-midi")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                app.startActivity(Intent.createChooser(fallback, "用…打开").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+            } catch (e2: Exception) {
+                _uiState.update {
+                    it.copy(errorMessage = "没有应用能打开 MIDI 文件: ${e2.message}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Share MIDI file via system share sheet (ACTION_SEND with EXTRA_STREAM).
+     */
+    fun shareMidi(output: MidiOutput) {
+        val app = appRef ?: return
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "audio/midi"
+            putExtra(Intent.EXTRA_STREAM, output.uri)
+            putExtra(Intent.EXTRA_SUBJECT, output.displayName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val chooser = Intent.createChooser(intent, "分享 ${output.displayName}")
+            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        try {
+            app.startActivity(chooser)
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(errorMessage = "没有应用可以分享: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Open the system file manager at the Downloads location.
+     */
+    fun openInFileManager() {
+        val app = appRef ?: return
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            app.startActivity(Intent.createChooser(intent, "在文件管理器中查看").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(errorMessage = "无法打开文件管理器: ${e.message}")
+            }
         }
     }
 

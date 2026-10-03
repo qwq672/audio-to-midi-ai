@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Allow sharing files from app's internal filesDir (where ModelManager
+         stores downloaded models and where pipeline writes intermediate files). -->
+    <files-path name="internal_files" path="." />
+    <cache-path name="internal_cache" path="." />
+    <!-- For external storage on older Android (API 26-28). -->
+    <external-files-path name="external_files" path="." />
+    <external-cache-path name="external_cache" path="." />
+</paths>

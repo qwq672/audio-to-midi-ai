@@ -87,7 +87,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 },
                 onRestart = {
                     viewModel.goToStep(WizardStep.HOME)
-                }
+                },
+                onOpenInFileManager = viewModel::openInFileManager
             )
         }
     ) { padding ->
@@ -136,7 +137,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     WizardStep.PROCESSING -> ProcessingPage(state)
                     WizardStep.COMPLETE -> CompletePage(
                         state = state,
-                        onListen = { /* TODO: open MIDI player */ }
+                        onListen = viewModel::listenToMidi,
+                        onShare = viewModel::shareMidi,
+                        onOpenInFileManager = viewModel::openInFileManager
                     )
                 }
             }

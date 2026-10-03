@@ -36,6 +36,7 @@ import com.audiomidi.ai.data.ModelRole
 import com.audiomidi.ai.model.DownloadState
 import com.audiomidi.ai.model.ModelStatus
 import com.audiomidi.ai.pipeline.PipelineStage
+import com.audiomidi.ai.util.MidiOutput
 
 // Common spacing constants
 private val xs = 4.dp
@@ -148,7 +149,8 @@ fun WizardBottomBar(
     onNext: () -> Unit,
     onCancel: () -> Unit,
     onStart: () -> Unit,
-    onRestart: () -> Unit
+    onRestart: () -> Unit,
+    onOpenInFileManager: () -> Unit = {}
 ) {
     Surface(
         shadowElevation = 12.dp,
@@ -221,10 +223,15 @@ fun WizardBottomBar(
                         Spacer(Modifier.width(sm))
                         Text("再来一次")
                     }
-                    Button(onClick = { }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
-                        Icon(Icons.Default.Share, contentDescription = null)
+                    Button(
+                        onClick = onOpenInFileManager,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = state.outputMidiFiles.isNotEmpty()
+                    ) {
+                        Icon(Icons.Default.Folder, contentDescription = null)
                         Spacer(Modifier.width(sm))
-                        Text("导出 / 分享")
+                        Text("打开文件管理器")
                     }
                 }
             }
@@ -1358,7 +1365,12 @@ private fun stageProgress(stage: PipelineStage?): Float = when (stage) {
 // ============================================================
 
 @Composable
-fun CompletePage(state: WizardUiState, onListen: (String) -> Unit) {
+fun CompletePage(
+    state: WizardUiState,
+    onListen: (MidiOutput) -> Unit,
+    onShare: (MidiOutput) -> Unit,
+    onOpenInFileManager: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(lg)) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1381,14 +1393,14 @@ fun CompletePage(state: WizardUiState, onListen: (String) -> Unit) {
             Text("转换完成",
                  style = MaterialTheme.typography.headlineLarge,
                  fontWeight = FontWeight.Bold)
-            if (state.outputMidiPaths.isNotEmpty()) {
-                Text("共生成 ${state.outputMidiPaths.size} 个 MIDI 文件",
+            if (state.outputMidiFiles.isNotEmpty()) {
+                Text("共生成 ${state.outputMidiFiles.size} 个 MIDI 文件",
                      style = MaterialTheme.typography.bodyMedium,
                      color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        if (state.outputMidiPaths.isEmpty()) {
+        if (state.outputMidiFiles.isEmpty()) {
             Card(
                 shape = RoundedCornerShape(xxl),
                 colors = CardDefaults.cardColors(
@@ -1405,47 +1417,96 @@ fun CompletePage(state: WizardUiState, onListen: (String) -> Unit) {
                 }
             }
         } else {
+            // Save location banner
+            Card(
+                shape = RoundedCornerShape(xxl),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Row(
+                    Modifier.padding(lg).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Folder, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Spacer(Modifier.width(md))
+                    Column(Modifier.weight(1f)) {
+                        Text("文件保存位置",
+                             style = MaterialTheme.typography.labelMedium,
+                             color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Text("Download/AudioToMidi/",
+                             style = MaterialTheme.typography.titleSmall,
+                             fontWeight = FontWeight.SemiBold,
+                             color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                    TextButton(onClick = onOpenInFileManager) {
+                        Text("打开")
+                        Spacer(Modifier.width(xs))
+                        Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+
             Column(verticalArrangement = Arrangement.spacedBy(md)) {
-                state.outputMidiPaths.forEach { path ->
+                state.outputMidiFiles.forEach { output ->
                     Card(
                         shape = RoundedCornerShape(xxl),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(lg),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.size(40.dp)
+                        Column(Modifier.padding(lg)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.AudioFile,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.AudioFile,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    }
+                                }
+                                Spacer(Modifier.width(md))
+                                Column(Modifier.weight(1f)) {
+                                    Text(output.displayName,
+                                         style = MaterialTheme.typography.titleSmall,
+                                         fontWeight = FontWeight.SemiBold,
+                                         maxLines = 1,
+                                         overflow = TextOverflow.Ellipsis)
+                                    Text(output.displayPath,
+                                         style = MaterialTheme.typography.labelSmall,
+                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                         maxLines = 2,
+                                         overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Spacer(Modifier.width(md))
-                            Column(Modifier.weight(1f)) {
-                                Text(path.substringAfterLast('/'),
-                                     style = MaterialTheme.typography.titleSmall,
-                                     fontWeight = FontWeight.SemiBold,
-                                     maxLines = 1,
-                                     overflow = TextOverflow.Ellipsis)
-                                Text(path,
-                                     style = MaterialTheme.typography.labelSmall,
-                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                     maxLines = 1,
-                                     overflow = TextOverflow.Ellipsis)
-                            }
-                            Button(onClick = { onListen(path) },
-                                shape = RoundedCornerShape(50)) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                                Spacer(Modifier.width(xs))
-                                Text("试听")
+                            Spacer(Modifier.height(md))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(sm)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { onShare(output) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(xs))
+                                    Text("分享")
+                                }
+                                Button(
+                                    onClick = { onListen(output) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(xs))
+                                    Text("试听")
+                                }
                             }
                         }
                     }
@@ -1472,3 +1533,18 @@ fun CompletePage(state: WizardUiState, onListen: (String) -> Unit) {
         }
     }
 }
+
+private fun stageProgress(stage: PipelineStage?): Float = when (stage) {
+    is PipelineStage.Loading -> stage.progress
+    is PipelineStage.Separating -> stage.progress
+    is PipelineStage.Transcribing -> stage.progress
+    is PipelineStage.DrumProcessing -> stage.progress
+    is PipelineStage.Merging -> stage.progress
+    is PipelineStage.Done -> 1f
+    else -> 0f
+}
+
+// ============================================================
+// PAGE 7: COMPLETE
+// ============================================================
+
