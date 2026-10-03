@@ -1,0 +1,147 @@
+{
+  "presetsVersion": "1.0",
+  "generatedAt": "2026-10-03",
+  "presets": [
+    {
+      "id": "pop",
+      "displayName": "Pop / Rock",
+      "emoji": "🎤",
+      "description": "Default preset. Uses Demucs 6-source separation to split vocals/drums/bass/piano/guitar/other, then transcribes each stem to MIDI.",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_6s",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "BASS_TRANSCRIBER": "basic_pitch",
+        "PIANO_TRANSCRIBER": "bytedance_piano",
+        "GUITAR_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "DRUM_PROCESSOR": "librosa_onset",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 12,
+      "confidenceThreshold": 0.6,
+      "minNoteDurationMs": 2000
+    },
+    {
+      "id": "rock",
+      "displayName": "Rock / Metal",
+      "emoji": "🎸",
+      "description": "Uses Demucs 6-source fine-tuned separator for better bass reproduction and electric guitar handling.",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_4s_ft",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "BASS_TRANSCRIBER": "basic_pitch",
+        "PIANO_TRANSCRIBER": "bytedance_piano",
+        "GUITAR_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "DRUM_PROCESSOR": "librosa_onset",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 14,
+      "confidenceThreshold": 0.55,
+      "minNoteDurationMs": 1500
+    },
+    {
+      "id": "electronic",
+      "displayName": "Electronic / EDM",
+      "emoji": "🎹",
+      "description": "Same Demucs 6s separator but uses OpenL3 classifier (better synth timbre recognition). Note: synth sub-type distinction still limited.",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_6s",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "BASS_TRANSCRIBER": "basic_pitch",
+        "PIANO_TRANSCRIBER": "bytedance_piano",
+        "GUITAR_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "DRUM_PROCESSOR": "librosa_onset",
+        "INSTRUMENT_CLASSIFIER": "openl3_classifier"
+      },
+      "maxInstruments": 10,
+      "confidenceThreshold": 0.55,
+      "minNoteDurationMs": 2500
+    },
+    {
+      "id": "classical",
+      "displayName": "Classical",
+      "emoji": "🎻",
+      "description": "Uses MT3 end-to-end multi-instrument transcription. Slower but produces cleaner multi-track output for orchestral and chamber music.",
+      "models": {
+        "END_TO_END_TRANSCRIBER": "mt3",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 15,
+      "confidenceThreshold": 0.5,
+      "minNoteDurationMs": 1500
+    },
+    {
+      "id": "jazz",
+      "displayName": "Jazz",
+      "emoji": "🎷",
+      "description": "Demucs 6s separation with specialized handling for brushes vs sticks drums and complex chords. Uses Bytedance piano for keyboard solos.",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_6s",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "BASS_TRANSCRIBER": "basic_pitch",
+        "PIANO_TRANSCRIBER": "bytedance_piano",
+        "GUITAR_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "DRUM_PROCESSOR": "librosa_onset",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 10,
+      "confidenceThreshold": 0.65,
+      "minNoteDurationMs": 1500
+    },
+    {
+      "id": "hip_hop",
+      "displayName": "Hip-hop / Rap",
+      "emoji": "🎙️",
+      "description": "Same as Electronic preset but emphasizes vocal isolation and 808 beat handling.",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_6s",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "BASS_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "DRUM_PROCESSOR": "librosa_onset",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 8,
+      "confidenceThreshold": 0.6,
+      "minNoteDurationMs": 2500
+    },
+    {
+      "id": "folk",
+      "displayName": "Folk / Acoustic",
+      "emoji": "🪕",
+      "description": "Lighter Demucs 4-source separation (faster). Focuses on acoustic guitar and vocal clarity. No drum transcription (often absent).",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_4s",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "GUITAR_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 6,
+      "confidenceThreshold": 0.7,
+      "minNoteDurationMs": 3000
+    },
+    {
+      "id": "auto",
+      "displayName": "Auto-detect",
+      "emoji": "✨",
+      "description": "Run a lightweight genre classifier on the input audio, then dispatch to the most appropriate preset. Adds ~5s preprocessing overhead.",
+      "models": {
+        "SOURCE_SEPARATOR": "demucs_6s",
+        "VOCAL_TRANSCRIBER": "basic_pitch",
+        "BASS_TRANSCRIBER": "basic_pitch",
+        "PIANO_TRANSCRIBER": "bytedance_piano",
+        "GUITAR_TRANSCRIBER": "basic_pitch",
+        "OTHER_TRANSCRIBER": "basic_pitch",
+        "DRUM_PROCESSOR": "librosa_onset",
+        "INSTRUMENT_CLASSIFIER": "yamnet"
+      },
+      "maxInstruments": 12,
+      "confidenceThreshold": 0.6,
+      "minNoteDurationMs": 2000
+    }
+  ]
+}

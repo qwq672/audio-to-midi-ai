@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Audio To MIDI AI</string>
+    <string name="app_subtitle">多乐器音频 → 多轨 MIDI</string>
+
+    <!-- Genre labels -->
+    <string name="genre_pop">流行 / 摇滚</string>
+    <string name="genre_rock">摇滚 / 金属</string>
+    <string name="genre_electronic">电子 / EDM</string>
+    <string name="genre_classical">古典</string>
+    <string name="genre_jazz">爵士</string>
+    <string name="genre_hip_hop">嘻哈</string>
+    <string name="genre_folk">民谣 / 原声</string>
+    <string name="genre_auto">自动检测</string>
+
+    <!-- Common UI -->
+    <string name="select_genre">1. 选择流派</string>
+    <string name="recommended_models">2. 推荐模型（可手动覆盖）</string>
+    <string name="select_audio">3. 选择音频文件</string>
+    <string name="pipeline_progress">4. 处理进度</string>
+    <string name="start_conversion">开始转换</string>
+    <string name="processing">处理中…</string>
+    <string name="select_audio_button">选择音频</string>
+    <string name="no_audio_selected">未选择</string>
+
+    <!-- Download states -->
+    <string name="dl_idle">待下载</string>
+    <string name="dl_downloading">下载中 %1$d%%  %2$d KB/s</string>
+    <string name="dl_verifying">校验中…</string>
+    <string name="dl_completed">已就绪</string>
+    <string name="dl_failed">失败：%1$d 个源</string>
+    <string name="dl_cancelled">已取消</string>
+
+    <!-- Pipeline stages -->
+    <string name="stage_loading">加载模型 %1$s %2$d%%</string>
+    <string name="stage_separating">分离音轨 %1$d%%</string>
+    <string name="stage_transcribing">转录 %1$s %2$d%%</string>
+    <string name="stage_drums">鼓轨处理 %1$d%%</string>
+    <string name="stage_classifying">识别乐器 %1$s</string>
+    <string name="stage_merging">合并 MIDI %1$d%%</string>
+    <string name="stage_done">完成，%1$d 个音轨</string>
+    <string name="stage_failed">失败（%1$s）：%2$s</string>
+
+    <!-- Settings -->
+    <string name="settings">设置</string>
+    <string name="region_auto">自动</string>
+    <string name="region_china">国内</string>
+    <string name="region_global">全球</string>
+    <string name="prefer_npu">优先使用 NPU 加速</string>
+    <string name="auto_download">切换流派时自动下载推荐模型</string>
+    <string name="max_parallel_downloads">最大并行下载数</string>
+</resources>

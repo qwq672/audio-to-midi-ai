@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_primary">#FF6A40E6</color>
+    <color name="purple_dark">#FF1F0055</color>
+    <color name="surface_light">#FFFFF7FA</color>
+    <color name="background_dark">#FF141118</color>
+    <color name="ic_launcher_background">#FF1F0055</color>
+</resources>
