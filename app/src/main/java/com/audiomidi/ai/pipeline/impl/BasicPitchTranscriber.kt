@@ -8,6 +8,7 @@ import com.audiomidi.ai.pipeline.AudioData
 import com.audiomidi.ai.pipeline.MidiNote
 import com.audiomidi.ai.pipeline.Transcriber
 import timber.log.Timber
+import java.nio.FloatBuffer
 
 /**
  * Spotify Basic Pitch ONNX transcriber.
@@ -82,8 +83,11 @@ class BasicPitchTranscriber(
             }
 
             // 4. Build ONNX Tensor [1, INPUT_LEN, 1]
+            // onnxruntime-android 1.17.0 doesn't have createTensor(env, FloatArray, LongArray)
+            // overload — must wrap FloatArray in FloatBuffer first.
+            val floatBuffer = FloatBuffer.wrap(chunk)
             val inputTensor = OnnxTensor.createTensor(
-                env, chunk, longArrayOf(1, INPUT_LEN.toLong(), 1)
+                env, floatBuffer, longArrayOf(1, INPUT_LEN.toLong(), 1)
             )
 
             val result = try {
