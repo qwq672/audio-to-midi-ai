@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,11 +41,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platforms;android-34
-            build-tools;34.0.0
-            ndk;26.1.1091191
-            cmake;3.22.1
+          # Space-separated list (not multi-line) — multi-line breaks sdkmanager parsing.
+          # ubuntu-latest already ships Android 34 + build-tools 34.0.0 pre-installed;
+          # this step mainly ensures licenses are accepted.
+          packages: 'platforms;android-34 build-tools;34.0.0'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -63,9 +65,10 @@ jobs:
         run: ./gradlew -version
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk-${{ github.sha }}
@@ -89,6 +92,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,6 +107,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -119,4 +126,4 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run Lint
-        run: ./gradlew lintDebug --no-daemon
+        run: ./gradlew lintDebug
