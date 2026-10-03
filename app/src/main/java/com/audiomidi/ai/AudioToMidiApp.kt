@@ -74,8 +74,7 @@ class AudioToMidiApp : Application() {
             registry = ModelRegistry.placeholder(),
             separatorFactory = { modelId ->
                 when (modelId) {
-                    "demucs_6s", "demucs_4s", "demucs_4s_ft" -> DemucsSeparator(this, modelId)
-                    "spleeter_4s" -> DemucsSeparator(this, modelId)
+                    "demucs_4s", "demucs_4s_ft" -> DemucsSeparator(this, modelId)
                     else -> throw IllegalArgumentException("Unknown separator: $modelId")
                 }
             },
@@ -83,14 +82,12 @@ class AudioToMidiApp : Application() {
                 when (modelId) {
                     "basic_pitch" -> BasicPitchTranscriber(this, modelId)
                     "bytedance_piano" -> KongPianoTranscriber(this, modelId)
-                    "mt3" -> BasicPitchTranscriber(this, modelId)
                     else -> throw IllegalArgumentException("Unknown transcriber: $modelId")
                 }
             },
             classifierFactory = { modelId ->
                 when (modelId) {
                     "yamnet" -> YamNetClassifier(this, modelId)
-                    "openl3_classifier" -> YamNetClassifier(this, modelId)
                     else -> throw IllegalArgumentException("Unknown classifier: $modelId")
                 }
             },

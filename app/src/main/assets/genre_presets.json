@@ -1,14 +1,15 @@
 {
-  "presetsVersion": "1.0",
+  "presetsVersion": "1.1",
   "generatedAt": "2026-10-03",
+  "note": "All presets use only models verified to exist in manifest v1.1. Classical preset uses Bytedance Piano directly without source separation (since MT3 ONNX export doesn't exist publicly).",
   "presets": [
     {
       "id": "pop",
       "displayName": "Pop / Rock",
       "emoji": "🎤",
-      "description": "Default preset. Uses Demucs 6-source separation to split vocals/drums/bass/piano/guitar/other, then transcribes each stem to MIDI.",
+      "description": "默认配置。用 Demucs 4 源分离把 vocals/drums/bass/other 拆开，每轨分别转 MIDI。",
       "models": {
-        "SOURCE_SEPARATOR": "demucs_6s",
+        "SOURCE_SEPARATOR": "demucs_4s",
         "VOCAL_TRANSCRIBER": "basic_pitch",
         "BASS_TRANSCRIBER": "basic_pitch",
         "PIANO_TRANSCRIBER": "bytedance_piano",
@@ -25,7 +26,7 @@
       "id": "rock",
       "displayName": "Rock / Metal",
       "emoji": "🎸",
-      "description": "Uses Demucs 6-source fine-tuned separator for better bass reproduction and electric guitar handling.",
+      "description": "用 Demucs fine-tuned 分离器，电吉他和贝斯还原更好。",
       "models": {
         "SOURCE_SEPARATOR": "demucs_4s_ft",
         "VOCAL_TRANSCRIBER": "basic_pitch",
@@ -44,16 +45,15 @@
       "id": "electronic",
       "displayName": "Electronic / EDM",
       "emoji": "🎹",
-      "description": "Same Demucs 6s separator but uses OpenL3 classifier (better synth timbre recognition). Note: synth sub-type distinction still limited.",
+      "description": "Demucs 4 源分离 + YamNet 分类。OpenL3 没有 ONNX 版本，先用 YamNet 顶替，合成器音色识别会比较粗。",
       "models": {
-        "SOURCE_SEPARATOR": "demucs_6s",
+        "SOURCE_SEPARATOR": "demucs_4s",
         "VOCAL_TRANSCRIBER": "basic_pitch",
         "BASS_TRANSCRIBER": "basic_pitch",
-        "PIANO_TRANSCRIBER": "bytedance_piano",
         "GUITAR_TRANSCRIBER": "basic_pitch",
         "OTHER_TRANSCRIBER": "basic_pitch",
         "DRUM_PROCESSOR": "librosa_onset",
-        "INSTRUMENT_CLASSIFIER": "openl3_classifier"
+        "INSTRUMENT_CLASSIFIER": "yamnet"
       },
       "maxInstruments": 10,
       "confidenceThreshold": 0.55,
@@ -63,9 +63,9 @@
       "id": "classical",
       "displayName": "Classical",
       "emoji": "🎻",
-      "description": "Uses MT3 end-to-end multi-instrument transcription. Slower but produces cleaner multi-track output for orchestral and chamber music.",
+      "description": "古典以钢琴为主，直接用 Bytedance Piano 转录整段音频，跳过分轨。MT3 没有公开 ONNX 版本，等社区有 port 再加。",
       "models": {
-        "END_TO_END_TRANSCRIBER": "mt3",
+        "PIANO_TRANSCRIBER": "bytedance_piano",
         "INSTRUMENT_CLASSIFIER": "yamnet"
       },
       "maxInstruments": 15,
@@ -76,9 +76,9 @@
       "id": "jazz",
       "displayName": "Jazz",
       "emoji": "🎷",
-      "description": "Demucs 6s separation with specialized handling for brushes vs sticks drums and complex chords. Uses Bytedance piano for keyboard solos.",
+      "description": "Demucs 4 源分离 + Bytedance 钢琴专用转录，爵士鼓刷识别靠 librosa onset。",
       "models": {
-        "SOURCE_SEPARATOR": "demucs_6s",
+        "SOURCE_SEPARATOR": "demucs_4s",
         "VOCAL_TRANSCRIBER": "basic_pitch",
         "BASS_TRANSCRIBER": "basic_pitch",
         "PIANO_TRANSCRIBER": "bytedance_piano",
@@ -95,9 +95,9 @@
       "id": "hip_hop",
       "displayName": "Hip-hop / Rap",
       "emoji": "🎙️",
-      "description": "Same as Electronic preset but emphasizes vocal isolation and 808 beat handling.",
+      "description": "和电子配置相同，强调人声分离和鼓点。",
       "models": {
-        "SOURCE_SEPARATOR": "demucs_6s",
+        "SOURCE_SEPARATOR": "demucs_4s",
         "VOCAL_TRANSCRIBER": "basic_pitch",
         "BASS_TRANSCRIBER": "basic_pitch",
         "OTHER_TRANSCRIBER": "basic_pitch",
@@ -112,7 +112,7 @@
       "id": "folk",
       "displayName": "Folk / Acoustic",
       "emoji": "🪕",
-      "description": "Lighter Demucs 4-source separation (faster). Focuses on acoustic guitar and vocal clarity. No drum transcription (often absent).",
+      "description": "Demucs 4 源分离，专注原声吉他和人声。通常无鼓轨。",
       "models": {
         "SOURCE_SEPARATOR": "demucs_4s",
         "VOCAL_TRANSCRIBER": "basic_pitch",
@@ -128,9 +128,9 @@
       "id": "auto",
       "displayName": "Auto-detect",
       "emoji": "✨",
-      "description": "Run a lightweight genre classifier on the input audio, then dispatch to the most appropriate preset. Adds ~5s preprocessing overhead.",
+      "description": "用 YamNet 先识别流派，再调度到对应预设。会增加约 5 秒预处理。",
       "models": {
-        "SOURCE_SEPARATOR": "demucs_6s",
+        "SOURCE_SEPARATOR": "demucs_4s",
         "VOCAL_TRANSCRIBER": "basic_pitch",
         "BASS_TRANSCRIBER": "basic_pitch",
         "PIANO_TRANSCRIBER": "bytedance_piano",

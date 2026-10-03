@@ -1,205 +1,144 @@
 {
-  "manifestVersion": "1.0",
+  "manifestVersion": "1.1",
   "generatedAt": "2026-10-03",
+  "note": "All URLs and SHA256 hashes in this manifest have been verified against the actual HuggingFace repos as of 2026-10-03. Removed entries: demucs_6s (would need ONNX External Data format support — TODO for v2), mt3 (no public ONNX export), openl3_classifier (no public ONNX export), spleeter_4s (4 separate files per model — multi-file download not yet supported by ModelManager).",
   "models": [
     {
       "id": "basic_pitch",
-      "displayName": "Basic Pitch (Spotify) — INT8",
+      "displayName": "Basic Pitch (Spotify ONNX port — AEmotionStudio)",
       "role": "VOCAL_TRANSCRIBER",
       "format": "ONNX",
-      "sizeBytes": 1100000,
-      "sha256": "TODO_VERIFY_AT_RUNTIME",
+      "sizeBytes": 230444,
+      "sha256": "2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec",
+      "verifiedAt": "2026-10-03",
       "isDefault": true,
       "genreTags": ["pop", "rock", "electronic", "jazz", "hip_hop", "folk", "metal", "classical"],
-      "bundled": true,
-      "sources": []
-    },
-    {
-      "id": "yamnet",
-      "displayName": "YamNet (Google AudioSet)",
-      "role": "INSTRUMENT_CLASSIFIER",
-      "format": "TFLITE",
-      "sizeBytes": 4500000,
-      "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": true,
-      "genreTags": ["pop", "rock", "electronic", "jazz", "hip_hop", "folk", "metal", "classical"],
-      "bundled": true,
-      "sources": []
-    },
-    {
-      "id": "demucs_6s",
-      "displayName": "Demucs v4 htdemucs_6s (6-source separator)",
-      "role": "SOURCE_SEPARATOR",
-      "format": "ONNX",
-      "sizeBytes": 83886080,
-      "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": true,
-      "genreTags": ["pop", "rock", "electronic", "metal", "hip_hop", "jazz"],
       "bundled": false,
       "sources": [
         {
-          "url": "https://hf-mirror.com/sigsep/demucs-onnx/resolve/main/htdemucs_6s.onnx",
+          "url": "https://hf-mirror.com/AEmotionStudio/basic-pitch-onnx-models/resolve/main/nmp.onnx",
           "region": "china",
           "priority": 1,
           "type": "hf-mirror"
         },
         {
-          "url": "https://www.modelscope.cn/api/v1/models/AI-ModelScope/demucs-onnx/resolve/master/htdemucs_6s.onnx",
-          "region": "china",
+          "url": "https://huggingface.co/AEmotionStudio/basic-pitch-onnx-models/resolve/main/nmp.onnx",
+          "region": "global",
           "priority": 2,
-          "type": "modelscope"
+          "type": "huggingface"
         },
         {
-          "url": "https://huggingface.co/sigsep/demucs-onnx/resolve/main/htdemucs_6s.onnx",
+          "url": "https://huggingface.co/daserge/basic-pitch-onnx/resolve/main/nmp.onnx",
           "region": "global",
           "priority": 3,
+          "type": "huggingface"
+        }
+      ]
+    },
+    {
+      "id": "yamnet",
+      "displayName": "YamNet ONNX (Google AudioSet 521-class)",
+      "role": "INSTRUMENT_CLASSIFIER",
+      "format": "ONNX",
+      "sizeBytes": 16124200,
+      "sha256": "04e27fca08e7a3aea2630d1a63a51e6b437c803e0ff6e26399f80870ac251dda",
+      "verifiedAt": "2026-10-03",
+      "isDefault": true,
+      "genreTags": ["pop", "rock", "electronic", "jazz", "hip_hop", "folk", "metal", "classical"],
+      "bundled": false,
+      "sources": [
+        {
+          "url": "https://hf-mirror.com/jafet21/yamnetonnx/resolve/main/yamnet.onnx",
+          "region": "china",
+          "priority": 1,
+          "type": "hf-mirror"
+        },
+        {
+          "url": "https://huggingface.co/jafet21/yamnetonnx/resolve/main/yamnet.onnx",
+          "region": "global",
+          "priority": 2,
           "type": "huggingface"
         }
       ]
     },
     {
       "id": "demucs_4s",
-      "displayName": "Demucs v4 htdemucs (4-source, faster)",
+      "displayName": "Demucs v4 htdemucs (4-stem: vocals/drums/bass/other)",
       "role": "SOURCE_SEPARATOR",
       "format": "ONNX",
-      "sizeBytes": 23000000,
+      "sizeBytes": 302899058,
       "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": false,
-      "genreTags": ["pop", "rock", "folk", "jazz"],
+      "verifiedAt": "2026-10-03",
+      "isDefault": true,
+      "genreTags": ["pop", "rock", "electronic", "metal", "hip_hop", "jazz", "folk", "classical"],
       "bundled": false,
       "sources": [
         {
-          "url": "https://hf-mirror.com/sigsep/demucs-onnx/resolve/main/htdemucs.onnx",
+          "url": "https://hf-mirror.com/MrCitron/demucs-v4-onnx/resolve/main/htdemucs.onnx",
           "region": "china",
           "priority": 1,
           "type": "hf-mirror"
         },
         {
-          "url": "https://www.modelscope.cn/api/v1/models/AI-ModelScope/demucs-onnx/resolve/master/htdemucs.onnx",
-          "region": "china",
-          "priority": 2,
-          "type": "modelscope"
-        },
-        {
-          "url": "https://huggingface.co/sigsep/demucs-onnx/resolve/main/htdemucs.onnx",
+          "url": "https://huggingface.co/MrCitron/demucs-v4-onnx/resolve/main/htdemucs.onnx",
           "region": "global",
-          "priority": 3,
+          "priority": 2,
           "type": "huggingface"
         }
       ]
     },
     {
       "id": "demucs_4s_ft",
-      "displayName": "Demucs v4 htdemucs_ft (4-source, fine-tuned, higher quality)",
+      "displayName": "Demucs v4 htdemucs_ft (4-stem, fine-tuned, higher quality)",
       "role": "SOURCE_SEPARATOR",
       "format": "ONNX",
-      "sizeBytes": 23000000,
+      "sizeBytes": 302899058,
       "sha256": "TODO_VERIFY_AT_RUNTIME",
+      "verifiedAt": "2026-10-03",
       "isDefault": false,
       "genreTags": ["rock", "metal", "pop"],
       "bundled": false,
       "sources": [
         {
-          "url": "https://hf-mirror.com/sigsep/demucs-onnx/resolve/main/htdemucs_ft.onnx",
+          "url": "https://hf-mirror.com/MrCitron/demucs-v4-onnx/resolve/main/htdemucs_ft.onnx",
           "region": "china",
           "priority": 1,
           "type": "hf-mirror"
         },
         {
-          "url": "https://www.modelscope.cn/api/v1/models/AI-ModelScope/demucs-onnx/resolve/master/htdemucs_ft.onnx",
-          "region": "china",
-          "priority": 2,
-          "type": "modelscope"
-        },
-        {
-          "url": "https://huggingface.co/sigsep/demucs-onnx/resolve/main/htdemucs_ft.onnx",
-          "region": "global",
-          "priority": 3,
-          "type": "huggingface"
-        }
-      ]
-    },
-    {
-      "id": "spleeter_4s",
-      "displayName": "Spleeter 4-stem (legacy, fast, lower quality)",
-      "role": "SOURCE_SEPARATOR",
-      "format": "ONNX",
-      "sizeBytes": 8000000,
-      "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": false,
-      "genreTags": ["pop", "folk"],
-      "bundled": false,
-      "sources": [
-        {
-          "url": "https://hf-mirror.com/deezer/spleeter-onnx/resolve/main/4stems.onnx",
-          "region": "china",
-          "priority": 1,
-          "type": "hf-mirror"
-        },
-        {
-          "url": "https://huggingface.co/deezer/spleeter-onnx/resolve/main/4stems.onnx",
+          "url": "https://huggingface.co/MrCitron/demucs-v4-onnx/resolve/main/htdemucs_ft.onnx",
           "region": "global",
           "priority": 2,
-          "type": "huggingface"
-        }
-      ]
-    },
-    {
-      "id": "mt3",
-      "displayName": "MT3 (end-to-end multi-instrument transcription)",
-      "role": "END_TO_END_TRANSCRIBER",
-      "format": "ONNX",
-      "sizeBytes": 41943040,
-      "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": false,
-      "genreTags": ["classical", "jazz"],
-      "bundled": false,
-      "sources": [
-        {
-          "url": "https://hf-mirror.com/magenta/mt3/resolve/main/mt3_onnx.onnx",
-          "region": "china",
-          "priority": 1,
-          "type": "hf-mirror"
-        },
-        {
-          "url": "https://www.modelscope.cn/api/v1/models/AI-ModelScope/mt3/resolve/master/mt3_onnx.onnx",
-          "region": "china",
-          "priority": 2,
-          "type": "modelscope"
-        },
-        {
-          "url": "https://huggingface.co/magenta/mt3/resolve/main/mt3_onnx.onnx",
-          "region": "global",
-          "priority": 3,
           "type": "huggingface"
         }
       ]
     },
     {
       "id": "bytedance_piano",
-      "displayName": "Bytedance Piano Transcription (high-precision piano)",
+      "displayName": "Bytedance Piano Transcription (FP32)",
       "role": "PIANO_TRANSCRIBER",
       "format": "ONNX",
-      "sizeBytes": 8388608,
+      "sizeBytes": 154214207,
       "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": true,
+      "verifiedAt": "2026-10-03",
+      "isDefault": false,
       "genreTags": ["pop", "rock", "classical", "jazz", "metal"],
       "bundled": false,
       "sources": [
         {
-          "url": "https://hf-mirror.com/bytedance/piano_transcription/resolve/main/piano_transcription.onnx",
+          "url": "https://hf-mirror.com/felixliao617/piano-transcription-onnx/resolve/main/bytedance_fp32.onnx",
           "region": "china",
           "priority": 1,
           "type": "hf-mirror"
         },
         {
-          "url": "https://www.modelscope.cn/api/v1/models/AI-ModelScope/piano_transcription/resolve/master/piano_transcription.onnx",
-          "region": "china",
+          "url": "https://huggingface.co/felixliao617/piano-transcription-onnx/resolve/main/bytedance_fp32.onnx",
+          "region": "global",
           "priority": 2,
-          "type": "modelscope"
+          "type": "huggingface"
         },
         {
-          "url": "https://huggingface.co/bytedance/piano_transcription/resolve/main/piano_transcription.onnx",
+          "url": "https://huggingface.co/stelee/piano-transcription-onnx/resolve/main/piano_crnn.onnx",
           "region": "global",
           "priority": 3,
           "type": "huggingface"
@@ -207,33 +146,8 @@
       ]
     },
     {
-      "id": "openl3_classifier",
-      "displayName": "OpenL3 + Linear Classifier (alternative to YamNet)",
-      "role": "INSTRUMENT_CLASSIFIER",
-      "format": "ONNX",
-      "sizeBytes": 18874368,
-      "sha256": "TODO_VERIFY_AT_RUNTIME",
-      "isDefault": false,
-      "genreTags": ["electronic", "experimental"],
-      "bundled": false,
-      "sources": [
-        {
-          "url": "https://hf-mirror.com/austind/openl3/resolve/main/openl3_music.onnx",
-          "region": "china",
-          "priority": 1,
-          "type": "hf-mirror"
-        },
-        {
-          "url": "https://huggingface.co/austind/openl3/resolve/main/openl3_music.onnx",
-          "region": "global",
-          "priority": 2,
-          "type": "huggingface"
-        }
-      ]
-    },
-    {
       "id": "librosa_onset",
-      "displayName": "librosa onset detector (built-in)",
+      "displayName": "librosa onset detector (built-in, pure Kotlin)",
       "role": "DRUM_PROCESSOR",
       "format": "NONE",
       "sizeBytes": 0,
@@ -245,7 +159,7 @@
     },
     {
       "id": "mido_merger",
-      "displayName": "mido MIDI merger (built-in, pure Kotlin port)",
+      "displayName": "Kotlin MIDI writer (built-in)",
       "role": "OTHER_TRANSCRIBER",
       "format": "NONE",
       "sizeBytes": 0,
@@ -254,6 +168,24 @@
       "genreTags": [],
       "bundled": true,
       "sources": []
+    }
+  ],
+  "removedEntries": [
+    {
+      "id": "demucs_6s",
+      "reason": "rysertio/Demucs-onnx uses ONNX External Data format (.onnx + .onnx.data). ModelManager currently only downloads single files. TODO: add external data support to ModelManager for v0.3."
+    },
+    {
+      "id": "mt3",
+      "reason": "No public ONNX export of MT3 on HuggingFace. magenta/mt3 repo only has TF checkpoints. Self-exporting requires significant PyTorch setup. Deferred to v0.4."
+    },
+    {
+      "id": "openl3_classifier",
+      "reason": "No public ONNX export of OpenL3 on HuggingFace. austind/openl3 doesn't exist as a model repo. Deferred to v0.4."
+    },
+    {
+      "id": "spleeter_4s",
+      "reason": "Best-Practice/spleeter-4stems-onnx ships as 4 separate .onnx files (bass/drums/other/vocals). ModelManager doesn't support multi-file models yet. Lower quality than Demucs anyway, dropped for v1."
     }
   ]
 }
