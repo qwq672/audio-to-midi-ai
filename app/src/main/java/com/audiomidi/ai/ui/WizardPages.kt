@@ -398,7 +398,6 @@ private fun SettingsCard(
     Card(
         shape = RoundedCornerShape(xxl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        tonalElevation = 1.dp
     ) {
         Column(Modifier.padding(lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -628,7 +627,6 @@ private fun ModelRoleCard(
     Card(
         shape = RoundedCornerShape(xxl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        tonalElevation = 1.dp
     ) {
         Column(Modifier.padding(lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1003,7 +1001,6 @@ private fun SummaryCard(
     Card(
         shape = RoundedCornerShape(xxl),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        tonalElevation = 1.dp
     ) {
         Column(Modifier.padding(lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1203,7 +1200,6 @@ fun CompletePage(state: WizardUiState, onListen: (String) -> Unit) {
                     Card(
                         shape = RoundedCornerShape(xxl),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        tonalElevation = 1.dp
                     ) {
                         Row(
                             modifier = Modifier
