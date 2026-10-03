@@ -52,7 +52,8 @@ else
 fi
 
 # Pick up JVM opts from env, with safe defaults.
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+# NOTE: no embedded quotes — word-splitting handles separation.
+DEFAULT_JVM_OPTS="-Xmx64m -Xms64m"
 
 # Execute Gradle wrapper main class with all args.
 exec "$JAVACMD" \
