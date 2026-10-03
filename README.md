@@ -2,7 +2,24 @@
 
 端侧多乐器音频转多轨 MIDI 的 Android 应用骨架。专为 **荣耀 Magic 6 (Snapdragon 8 Gen 3 + Hexagon NPU)** 设计，依赖 ONNX Runtime Android 的 NNAPI Execution Provider 自动路由到 NPU 加速。
 
+![Android CI](https://github.com/qwq672/audio-to-midi-ai/actions/workflows/android-ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
+![Platform](https://img.shields.io/badge/platform-Android%2014%2B-green)
+![Status](https://img.shields.io/badge/status-v0.1.0%20skeleton-orange)
+
 > **状态**: v0.1.0 — 项目骨架完成。核心数据类、多源下载器、Pipeline 接口、Compose UI 都已就位；实际 ONNX 推理（Demucs/Basic Pitch/MT3）和音频 IO 为 TODO，需要在骨架上继续实现。
+
+## 直接获取 APK（无需本地装 Android Studio）
+
+每次推送到 main 分支后，GitHub Actions 会自动构建 Debug APK：
+
+1. 打开 https://github.com/qwq672/audio-to-midi-ai/actions
+2. 点最近一次 "Android CI" 运行
+3. 滑到最下面的 **Artifacts** 区
+4. 下载 `app-debug-apk-<commit-sha>` 压缩包，解压出 `app-debug.apk`
+5. 用 `adb install app-debug.apk` 或手机直接安装
+
+首次构建约 8-15 分钟（需要下载 Gradle + Android SDK + 依赖）。后续构建因为缓存命中，3-5 分钟。
 
 ## 设计目标
 
