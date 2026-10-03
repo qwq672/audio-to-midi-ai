@@ -6,15 +6,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.audiomidi.ai.ui.*
 import com.audiomidi.ai.ui.theme.AudioToMidiTheme
 
@@ -41,7 +43,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.uiState.collectAsState()
@@ -51,16 +53,6 @@ fun MainScreen(viewModel: MainViewModel) {
     ) { uris ->
         if (uris.isNotEmpty()) {
             viewModel.setSelectedAudioUris(uris)
-            // Take persistable permission so we can read later
-            uris.forEach { uri ->
-                try {
-                    viewModel.let {
-                        // SAF persistable permission - need contentResolver
-                        // For now, the URI is short-lived; in production use
-                        // contentResolver.takePersistableUriPermission(uri, ...)
-                    }
-                } catch (_: Exception) {}
-            }
         }
     }
 
@@ -71,9 +63,10 @@ fun MainScreen(viewModel: MainViewModel) {
                     title = { Text(topBarTitle(state.currentStep)) },
                     navigationIcon = {
                         if (state.currentStep != WizardStep.HOME &&
-                            state.currentStep != WizardStep.PROCESSING) {
+                            state.currentStep != WizardStep.PROCESSING &&
+                            state.currentStep != WizardStep.COMPLETE) {
                             IconButton(onClick = viewModel::prevStep) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "上一步")
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "上一步")
                             }
                         }
                     }
@@ -97,60 +90,64 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            when (state.currentStep) {
-                WizardStep.HOME -> HomePage(
-                    state = state,
-                    onRegionChange = viewModel::setDownloadRegion,
-                    onMaxParallelChange = viewModel::setMaxParallelDownloads,
-                    onNpuToggle = viewModel::setNpuPreferred,
-                    onAutoDownloadToggle = viewModel::setAutoDownloadOnGenreSelect
-                )
-                WizardStep.GENRE_SELECT -> GenreSelectPage(
-                    state = state,
-                    onSelect = { genreId ->
-                        viewModel.selectGenre(genreId)
-                    }
-                )
-                WizardStep.MODEL_SELECT -> ModelSelectPage(
-                    state = state,
-                    onOverride = viewModel::overrideModel,
-                    onShowAlternatives = { /* expanded inline */ }
-                )
-                WizardStep.AUDIO_SELECT -> AudioSelectPage(
-                    state = state,
-                    onPickFiles = {
-                        audioPickerLauncher.launch(arrayOf("audio/*"))
-                    },
-                    onRemoveUri = viewModel::removeAudioUri,
-                    onConversionCountChange = viewModel::setConversionCount,
-                    onMigrateMetadataToggle = viewModel::setMigrateMetadata
-                )
-                WizardStep.CONFIRM -> ConfirmPage(state)
-                WizardStep.PROCESSING -> ProcessingPage(state)
-                WizardStep.COMPLETE -> CompletePage(
-                    state = state,
-                    onListen = { path ->
-                        // TODO: open MIDI player / file manager
-                    }
-                )
+            // Smooth fade between steps
+            AnimatedContent(
+                targetState = state.currentStep,
+                transitionSpec = {
+                    fadeIn(initialAlpha = 0.3f) togetherWith fadeOut(targetAlpha = 0.3f)
+                },
+                label = "page-transition"
+            ) { step ->
+                when (step) {
+                    WizardStep.HOME -> HomePage(
+                        state = state,
+                        onRegionChange = viewModel::setDownloadRegion,
+                        onMaxParallelChange = viewModel::setMaxParallelDownloads,
+                        onNpuToggle = viewModel::setNpuPreferred,
+                        onAutoDownloadToggle = viewModel::setAutoDownloadOnGenreSelect
+                    )
+                    WizardStep.GENRE_SELECT -> GenreSelectPage(
+                        state = state,
+                        onSelect = { genreId -> viewModel.selectGenre(genreId) }
+                    )
+                    WizardStep.MODEL_SELECT -> ModelSelectPage(
+                        state = state,
+                        onOverride = viewModel::overrideModel,
+                        onShowAlternatives = { }
+                    )
+                    WizardStep.AUDIO_SELECT -> AudioSelectPage(
+                        state = state,
+                        onPickFiles = {
+                            audioPickerLauncher.launch(arrayOf("audio/*"))
+                        },
+                        onRemoveUri = viewModel::removeAudioUri,
+                        onConversionCountChange = viewModel::setConversionCount,
+                        onMigrateMetadataToggle = viewModel::setMigrateMetadata
+                    )
+                    WizardStep.CONFIRM -> ConfirmPage(state)
+                    WizardStep.PROCESSING -> ProcessingPage(state)
+                    WizardStep.COMPLETE -> CompletePage(
+                        state = state,
+                        onListen = { /* TODO: open MIDI player */ }
+                    )
+                }
             }
         }
     }
 }
 
 private fun topBarTitle(step: WizardStep): String = when (step) {
-    WizardStep.HOME -> "Audio To MIDI AI — 总设置"
-    WizardStep.GENRE_SELECT -> "1. 选择流派"
-    WizardStep.MODEL_SELECT -> "2. 选择模型"
-    WizardStep.AUDIO_SELECT -> "3. 选择音频"
-    WizardStep.CONFIRM -> "4. 确认"
-    WizardStep.PROCESSING -> "5. 处理中"
-    WizardStep.COMPLETE -> "6. 完成"
+    WizardStep.HOME -> "Audio To MIDI AI"
+    WizardStep.GENRE_SELECT -> "选择流派"
+    WizardStep.MODEL_SELECT -> "选择模型"
+    WizardStep.AUDIO_SELECT -> "选择音频"
+    WizardStep.CONFIRM -> "确认"
+    WizardStep.PROCESSING -> "处理中"
+    WizardStep.COMPLETE -> "完成"
 }
