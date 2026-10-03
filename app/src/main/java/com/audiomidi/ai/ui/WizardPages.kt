@@ -1534,17 +1534,3 @@ fun CompletePage(
     }
 }
 
-private fun stageProgress(stage: PipelineStage?): Float = when (stage) {
-    is PipelineStage.Loading -> stage.progress
-    is PipelineStage.Separating -> stage.progress
-    is PipelineStage.Transcribing -> stage.progress
-    is PipelineStage.DrumProcessing -> stage.progress
-    is PipelineStage.Merging -> stage.progress
-    is PipelineStage.Done -> 1f
-    else -> 0f
-}
-
-// ============================================================
-// PAGE 7: COMPLETE
-// ============================================================
-
