@@ -18,6 +18,9 @@ import com.audiomidi.ai.pipeline.impl.YamNetClassifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -25,8 +28,9 @@ import timber.log.Timber
  * Application entry point. Owns singletons shared across the app.
  *
  * [registry] and [presets] are nullable (rather than lateinit) because they're
- * loaded asynchronously from assets — callers must null-check before use,
- * or call [isReady] / [awaitReady].
+ * loaded asynchronously from assets. Callers can either:
+ * - null-check before use, or
+ * - observe [isReady] (a StateFlow that emits true once both are loaded).
  */
 class AudioToMidiApp : Application() {
 
@@ -45,11 +49,10 @@ class AudioToMidiApp : Application() {
     lateinit var pipelineExecutor: PipelineExecutor
         private set
 
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val _isReady = MutableStateFlow(false)
+    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
-    /** True once [registry] and [presets] have been loaded from assets. */
-    val isReady: Boolean
-        get() = registry != null && presets != null
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -106,6 +109,7 @@ class AudioToMidiApp : Application() {
             val loadedPresets = GenrePresetRegistry.load(this@AudioToMidiApp)
             registry = loadedRegistry
             presets = loadedPresets
+            _isReady.value = true
             Timber.i("Loaded ${loadedRegistry.all().size} models and ${loadedPresets.presets.size} presets")
 
             // Auto-detect region on first launch.
@@ -113,7 +117,7 @@ class AudioToMidiApp : Application() {
                 val detector = RegionDetector(Downloader())
                 val detected = detector.detect()
                 Timber.i("Auto-detected region: $detected")
-                // TODO: persist via DataStore; for now just log.
+                // TODO: persist via DataStore
             }
         }
 
