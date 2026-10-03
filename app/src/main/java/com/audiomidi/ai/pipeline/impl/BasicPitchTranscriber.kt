@@ -7,20 +7,12 @@ import com.audiomidi.ai.pipeline.AudioData
 import com.audiomidi.ai.pipeline.MidiNote
 import com.audiomidi.ai.pipeline.Transcriber
 import timber.log.Timber
-import java.nio.FloatBuffer
 
 /**
  * Spotify's Basic Pitch model — lightweight CNN for monophonic & some polyphonic
  * pitch transcription. Works on vocals, bass, guitar, melodic stems.
  *
- * **Status: Skeleton.**
- * ONNX session is created here. Real inference requires:
- *  - Audio resampling to 22.05 kHz (Basic Pitch native rate)
- *  - Frame-by-frame input construction (model expects 16ms frames)
- *  - Output interpretation: 3 output tensors (note, onset, frame)
- *  - Peak-picking on note output → (pitch, start, duration)
- *
- * Reference: https://github.com/spotify/basic-pitch (look for ONNX export)
+ * **Status: Skeleton.** Real inference TODO; see file header doc.
  */
 class BasicPitchTranscriber(
     private val context: Context,
@@ -33,7 +25,6 @@ class BasicPitchTranscriber(
     override suspend fun load(modelPath: String) {
         env = OrtEnvironment.getEnvironment()
         val options = OrtSession.SessionOptions().apply {
-            //noinspection UnsafeOptInUsageError
             addNnapi()
             setIntraOpNumThreads(4)
         }
@@ -51,16 +42,10 @@ class BasicPitchTranscriber(
         // ----- TODO: Real inference -----
         // 1. Resample input to 22050 Hz
         // 2. Normalize to peak 1.0
-        // 3. Build input tensor of shape [1, num_frames, n_mels=264] (or [1, audio_length])
-        //    depending on the specific ONNX export version
-        // 4. Run inference → 3 output tensors:
-        //    - note (shape [1, num_frames, 88]) — probability per MIDI note per frame
-        //    - onset (same shape) — note onset probability
-        //    - frame (same shape) — frame activation probability
-        // 5. Apply peak-picking: for each pitch, threshold note prob (e.g., 0.5)
-        // 6. For each contiguous run of frames with prob > threshold,
-        //    emit a MidiNote with start time = first frame * frame_ms,
-        //    end = last frame * frame_ms, pitch = pitch, velocity from peak prob.
+        // 3. Build input tensor of shape [1, num_frames, 264] (n_mels) — OR
+        //    [1, audio_length] depending on the ONNX export variant.
+        // 4. Run inference → 3 outputs: note, onset, frame probabilities.
+        // 5. Peak-pick note output above threshold (e.g. 0.5) → emit MidiNotes.
 
         Timber.w("BasicPitchTranscriber: returning placeholder empty notes.")
         return emptyList()

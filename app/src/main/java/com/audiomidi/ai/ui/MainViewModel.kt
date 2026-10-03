@@ -14,7 +14,7 @@ import com.audiomidi.ai.pipeline.PipelineStage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -34,18 +34,17 @@ data class MainUiState(
 )
 
 /**
- * Main screen ViewModel. Bridges UI ↔ app singletons (modelManager,
- * pipelineExecutor). Manages user-selected genre + override models.
+ * Main screen ViewModel. Bridges UI ↔ app singletons.
  */
 class MainViewModel : ViewModel() {
 
-    private lateinit var app: AudioToMidiApp
+    private var appRef: AudioToMidiApp? = null
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     fun bind(app: AudioToMidiApp) {
-        this.app = app
+        this.appRef = app
         refreshState()
         // Subscribe to download events
         viewModelScope.launch {
@@ -62,20 +61,21 @@ class MainViewModel : ViewModel() {
     }
 
     private fun refreshState() {
-        val appReady = ::app.isInitialized
-        val presetsReady = appReady && app::presets.isInitialized
-        val registryReady = appReady && app::registry.isInitialized
+        val app = appRef ?: return
+        val r = app.registry
+        val p = app.presets
         _uiState.update {
             it.copy(
-                availablePresets = if (presetsReady) app.presets.presets else emptyList(),
-                availableModels = if (registryReady) app.registry.all() else emptyList(),
+                availablePresets = p?.presets ?: emptyList(),
+                availableModels = r?.all() ?: emptyList(),
                 currentConfig = it.currentConfig ?: defaultConfigFor(it.selectedGenreId)
             )
         }
     }
 
     fun selectGenre(genreId: String) {
-        val preset = app.presets.byId(genreId) ?: return
+        val app = appRef ?: return
+        val preset = app.presets?.byId(genreId) ?: return
         val config = PipelineConfig(
             name = preset.displayName,
             baseGenreId = genreId,
@@ -86,17 +86,14 @@ class MainViewModel : ViewModel() {
             isCustom = false
         )
         _uiState.update {
-            it.copy(
-                selectedGenreId = genreId,
-                currentConfig = config
-            )
+            it.copy(selectedGenreId = genreId, currentConfig = config)
         }
         // Trigger auto-download of recommended models if needed.
         if (app.settings.autoDownloadOnGenreSelect) {
             viewModelScope.launch {
                 preset.models.values.forEach { modelId ->
-                    val asset = app.registry.byId(modelId)
-                    if (asset != null && !app.modelManager.isAvailable(asset)) {
+                    val asset = app.registry?.byId(modelId) ?: return@forEach
+                    if (!app.modelManager.isAvailable(asset)) {
                         app.modelManager.ensureDownloaded(asset)
                     }
                 }
@@ -114,11 +111,8 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(inputAudioPath = path) }
     }
 
-    /**
-     * Trigger the full pipeline. In production this would delegate to a
-     * foreground service; here it just calls the executor directly.
-     */
     fun startProcessing() {
+        val app = appRef ?: return
         val config = _uiState.value.currentConfig ?: return
         val inputPath = _uiState.value.inputAudioPath ?: return
 
@@ -126,8 +120,7 @@ class MainViewModel : ViewModel() {
             it.copy(isProcessing = true, errorMessage = null, outputMidiPath = null)
         }
         viewModelScope.launch {
-            // TODO: load audio from inputPath into AudioData
-            // For now, placeholder empty audio to show the pipeline wiring.
+            // TODO: load audio from inputPath into AudioData.
             val audio = AudioData(sampleRate = 44100, channels = 2, samples = FloatArray(0))
             val result = app.pipelineExecutor.run(audio, config)
             result.onSuccess { (midiBytes, _) ->
@@ -147,7 +140,8 @@ class MainViewModel : ViewModel() {
     }
 
     private fun updateModelStatus(modelId: String, state: DownloadState) {
-        val asset = app.registry.byId(modelId) ?: return
+        val app = appRef ?: return
+        val asset = app.registry?.byId(modelId) ?: return
         val status = ModelStatus(
             asset = asset,
             isAvailable = state is DownloadState.Completed,
@@ -160,8 +154,8 @@ class MainViewModel : ViewModel() {
     }
 
     private fun defaultConfigFor(genreId: String): PipelineConfig? {
-        if (!::app.isInitialized || !app::presets.isInitialized) return null
-        val preset = app.presets.byId(genreId) ?: return null
+        val app = appRef ?: return null
+        val preset = app.presets?.byId(genreId) ?: return null
         return PipelineConfig(
             name = preset.displayName,
             baseGenreId = genreId,
