@@ -288,7 +288,7 @@ private fun regionLabel(region: DownloadRegion): String = when (region) {
 fun GenreSelectPage(state: WizardUiState, onSelect: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("选择流派", style = MaterialTheme.typography.headlineSmall)
-        Text("不同流派有不同的模型组合。可以后续在"模型选择"页手动覆盖。",
+        Text("不同流派有不同的模型组合。可以后续在「模型选择」页手动覆盖。",
              style = MaterialTheme.typography.bodySmall)
         if (state.isLoading) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -362,7 +362,7 @@ fun ModelSelectPage(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("推荐模型", style = MaterialTheme.typography.headlineSmall)
-        Text("带 ✓ 标记的是该流派推荐配置，可点击"更换"手动覆盖。",
+        Text("带 ✓ 标记的是该流派推荐配置，可点击「更换」手动覆盖。",
              style = MaterialTheme.typography.bodySmall)
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -591,7 +591,7 @@ fun ConfirmPage(state: WizardUiState) {
                 val total = perSong * state.selectedAudioUris.size * state.conversionCount
                 Text("≈ ${total / 60} 分钟（基于经验和模型数量估算）",
                      style = MaterialTheme.typography.bodyMedium)
-                Text("转换会在后台运行，可中途取消。完成后可在"完成"页试听。",
+                Text("转换会在后台运行，可中途取消。完成后可在「完成」页试听。",
                      style = MaterialTheme.typography.bodySmall)
             }
         }

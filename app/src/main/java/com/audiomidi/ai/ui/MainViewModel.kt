@@ -224,15 +224,16 @@ class MainViewModel : ViewModel() {
                 // For now: placeholder empty audio to show the pipeline wiring
                 val audio = AudioData(sampleRate = 44100, channels = 2, samples = FloatArray(0))
                 val result = app.pipelineExecutor.run(audio, config)
-                result.onSuccess { (midiBytes, _) ->
-                    // TODO: write midiBytes to Downloads/AudioToMidi/<uri_last_segment>.mid
-                    //       if migrateMetadata is true, also embed ID3 tag info as text events
-                    val outName = "output_${System.currentTimeMillis()}.mid"
-                    outputs.add("Downloads/AudioToMidi/$outName")
-                }.onFailure { e ->
-                    _uiState.update { it.copy(errorMessage = e.message) }
+                if (result.isFailure) {
+                    val err = result.exceptionOrNull()?.message ?: "Unknown error"
+                    _uiState.update { it.copy(errorMessage = err) }
                     break
                 }
+                val (_, _) = result.getOrThrow()
+                // TODO: write midiBytes to Downloads/AudioToMidi/<uri_last_segment>.mid
+                //       if migrateMetadata is true, also embed ID3 tag info as text events
+                val outName = "output_${System.currentTimeMillis()}.mid"
+                outputs.add("Downloads/AudioToMidi/$outName")
             }
             _uiState.update {
                 it.copy(
