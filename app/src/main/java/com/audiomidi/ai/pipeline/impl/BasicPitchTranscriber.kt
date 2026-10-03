@@ -23,7 +23,8 @@ import java.nio.FloatBuffer
  */
 class BasicPitchTranscriber(
     private val context: Context,
-    override val modelId: String
+    override val modelId: String,
+    private val preferNpu: Boolean = false
 ) : Transcriber {
 
     private var session: OrtSession? = null
@@ -32,7 +33,19 @@ class BasicPitchTranscriber(
     override suspend fun load(modelPath: String) {
         val env = OrtEnvironment.getEnvironment()
         val options = OrtSession.SessionOptions().apply {
-            addNnapi()
+            // NNAPI EP can cause native SIGSEGV on Snapdragon NPU drivers
+            // (specifically with Basic Pitch's dynamic-shape conv layers).
+            // Only enable if user explicitly opted in via Settings.
+            if (preferNpu) {
+                try {
+                    addNnapi()
+                    Timber.i("NNAPI EP enabled (user opt-in)")
+                } catch (e: Throwable) {
+                    Timber.w(e, "NNAPI EP init failed, falling back to CPU")
+                }
+            } else {
+                Timber.i("Using CPU execution (NNAPI disabled by default for stability)")
+            }
             setIntraOpNumThreads(4)
         }
         val modelFile = java.io.File(modelPath)
@@ -92,17 +105,22 @@ class BasicPitchTranscriber(
 
             val result = try {
                 s.run(mapOf(inputName to inputTensor))
-            } finally {
+            } catch (e: Throwable) {
                 inputTensor.close()
+                Timber.e(e, "ONNX run failed on chunk $chunkIdx")
+                throw RuntimeException("ONNX 推理失败 (chunk $chunkIdx): ${e.message}", e)
             }
+            inputTensor.close()
 
             try {
                 // 5. outputs[1] is the note probability tensor [1, 172, 88]
                 val noteTensor = result.get(1)
                 try {
+                    val value = noteTensor.value
+                        ?: throw RuntimeException("ONNX output[1] value is null")
                     @Suppress("UNCHECKED_CAST")
-                    val value = noteTensor.value as Array<Array<FloatArray>>  // [1][172][88]
-                    val probs = value[0]  // [172][88]
+                    val probs3d = value as Array<Array<FloatArray>>  // [1][172][88]
+                    val probs = probs3d[0]  // [172][88]
                     decodeNotesFromChunk(probs, chunkIdx, allNotes)
                 } finally {
                     noteTensor.close()

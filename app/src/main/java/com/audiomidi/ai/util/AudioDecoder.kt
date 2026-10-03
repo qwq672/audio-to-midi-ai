@@ -67,15 +67,24 @@ class AudioDecoder(private val context: Context) {
             codec.configure(format, null, null, 0)
             codec.start()
 
-            val samples = ArrayList<Float>(sampleRate * 60 * channels)  // pre-alloc 60s
+            // Output format may differ from input format; use the actual
+            // output format once we receive INFO_OUTPUT_FORMAT_CHANGED.
+            var outSampleRate = sampleRate
+            var outChannels = channels
+
+            // Pre-allocate assuming up to 5 minutes of audio (avoids repeated grow)
+            val initialCap = outSampleRate * 60 * 5 * outChannels
+            val samples = ArrayList<Float>(initialCap.coerceAtMost(2_000_000))
             val bufferInfo = MediaCodec.BufferInfo()
             val timeoutUs = 10000L
-            var sawEOS = false
+            var sawInputEOS = false
+            var sawOutputEOS = false
+            var idleCount = 0
             var totalSamples = 0
 
-            while (true) {
+            while (!sawOutputEOS) {
                 // Feed input
-                if (!sawEOS) {
+                if (!sawInputEOS) {
                     val inputIdx = codec.dequeueInputBuffer(timeoutUs)
                     if (inputIdx >= 0) {
                         val inputBuffer = codec.getInputBuffer(inputIdx)
@@ -85,7 +94,7 @@ class AudioDecoder(private val context: Context) {
                             codec.queueInputBuffer(
                                 inputIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM
                             )
-                            sawEOS = true
+                            sawInputEOS = true
                         } else {
                             codec.queueInputBuffer(
                                 inputIdx, 0, sampleSize,
@@ -100,46 +109,60 @@ class AudioDecoder(private val context: Context) {
                 val outputIdx = codec.dequeueOutputBuffer(bufferInfo, timeoutUs)
                 when {
                     outputIdx == MediaCodec.INFO_TRY_AGAIN_LATER -> {
-                        if (sawEOS) {
-                            // No more output coming
-                            break
+                        // No output right now; if we've sent EOS and been idle
+                        // for a long time (5 sec), assume codec finished.
+                        if (sawInputEOS) {
+                            idleCount++
+                            if (idleCount > 500) {  // 500 * 10ms = 5 sec
+                                Timber.w("Codec idle for >5s after EOS, breaking")
+                                break
+                            }
                         }
                     }
                     outputIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         val newFormat = codec.outputFormat
-                        Timber.i("Output format changed: $newFormat")
+                        if (newFormat.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
+                            outSampleRate = newFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                        }
+                        if (newFormat.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
+                            outChannels = newFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                        }
+                        Timber.i("Output format: $outSampleRate Hz, $outChannels ch")
                     }
                     outputIdx >= 0 -> {
-                        val outputBuffer = codec.getOutputBuffer(outputIdx)
-                        if (outputBuffer != null && bufferInfo.size > 0) {
-                            outputBuffer.position(bufferInfo.offset)
-                            outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
-                            // Decode PCM 16-bit LE interleaved
-                            val pcm = ByteArray(outputBuffer.remaining())
-                            outputBuffer.get(pcm)
-                            val n = pcm.size / 2
-                            for (i in 0 until n) {
-                                val lo = pcm[i * 2].toInt() and 0xFF
-                                val hi = pcm[i * 2 + 1].toInt() and 0xFF
-                                val s = (hi shl 8) or lo
-                                val signed = if (s >= 32768) s - 65536 else s
-                                samples.add(signed / 32768f)
+                        idleCount = 0
+                        if (bufferInfo.size > 0) {
+                            val outputBuffer = codec.getOutputBuffer(outputIdx)
+                            if (outputBuffer != null) {
+                                outputBuffer.position(bufferInfo.offset)
+                                outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
+                                val pcm = ByteArray(outputBuffer.remaining())
+                                outputBuffer.get(pcm)
+                                // PCM 16-bit LE interleaved -> float [-1, 1]
+                                val n = pcm.size / 2
+                                for (i in 0 until n) {
+                                    val lo = pcm[i * 2].toInt() and 0xFF
+                                    val hi = pcm[i * 2 + 1].toInt() and 0xFF
+                                    val s = (hi shl 8) or lo
+                                    val signed = if (s >= 32768) s - 65536 else s
+                                    samples.add(signed / 32768f)
+                                }
+                                totalSamples += n
                             }
-                            totalSamples += n
                         }
                         codec.releaseOutputBuffer(outputIdx, false)
                         if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                            break
+                            sawOutputEOS = true
                         }
                     }
                 }
             }
 
-            Timber.i("Decoded $totalSamples samples (${totalSamples / channels} frames, ${totalSamples.toFloat() / sampleRate / channels} sec)")
+            Timber.i("Decoded $totalSamples samples, ${totalSamples / outChannels} frames, ${totalSamples.toFloat() / outSampleRate / outChannels} sec, $outSampleRate Hz, $outChannels ch")
 
             AudioData(
-                sampleRate = sampleRate,
-                channels = channels,
+                sampleRate = outSampleRate,
+                channels = outChannels,
                 samples = samples.toFloatArray()
             )
         } finally {

@@ -25,8 +25,11 @@ data class UserSettings(
     val downloadRegion: DownloadRegion = DownloadRegion.AUTO,
     val maxParallelDownloads: Int = 3,
     val autoDownloadOnGenreSelect: Boolean = true,
-    val preferNpuAcceleration: Boolean = true,
+    // NNAPI EP on Snapdragon NPU drivers can SIGSEGV on certain ONNX ops
+    // (e.g., dynamic-shape convolutions in Basic Pitch). Default OFF for
+    // stability. Users can opt in via Settings if they want to try NPU.
+    val preferNpuAcceleration: Boolean = false,
     val outputDir: String = "Downloads/AudioToMidi",
-    val lastUsedPresetId: String = "pop",
+    val lastUsedPresetId: String = "folk",
     val customPresets: List<PipelineConfig> = emptyList()
 )

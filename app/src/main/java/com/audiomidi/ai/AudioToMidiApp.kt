@@ -80,7 +80,10 @@ class AudioToMidiApp : Application() {
             },
             transcriberFactory = { modelId ->
                 when (modelId) {
-                    "basic_pitch" -> BasicPitchTranscriber(this, modelId)
+                    "basic_pitch" -> BasicPitchTranscriber(
+                        this, modelId,
+                        preferNpu = settings.preferNpuAcceleration
+                    )
                     "bytedance_piano" -> KongPianoTranscriber(this, modelId)
                     else -> throw IllegalArgumentException("Unknown transcriber: $modelId")
                 }
