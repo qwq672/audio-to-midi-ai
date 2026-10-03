@@ -16,6 +16,7 @@ import com.audiomidi.ai.model.DownloadState
 import com.audiomidi.ai.model.ModelStatus
 import com.audiomidi.ai.pipeline.AudioData
 import com.audiomidi.ai.pipeline.PipelineStage
+import com.audiomidi.ai.util.AudioDecoder
 import com.audiomidi.ai.util.MidiOutput
 import com.audiomidi.ai.util.MidiStorageWriter
 import kotlinx.coroutines.Job
@@ -247,9 +248,18 @@ class MainViewModel : ViewModel() {
         }
         val job = viewModelScope.launch {
             val outputs = mutableListOf<MidiOutput>()
+            val decoder = AudioDecoder(app)
             for ((idx, uri) in uris.withIndex()) {
-                // TODO: decode audio from uri to AudioData
-                val audio = AudioData(sampleRate = 44100, channels = 2, samples = FloatArray(0))
+                // 1. Decode the audio file (MP3/M4A/WAV/FLAC) into PCM FloatArray
+                val audio: AudioData = try {
+                    decoder.decode(uri)
+                } catch (e: Exception) {
+                    _uiState.update {
+                        it.copy(errorMessage = "音频解码失败: ${e.message}")
+                    }
+                    break
+                }
+                // 2. Run the pipeline (separation + transcription + classification + write)
                 val result = app.pipelineExecutor.run(audio, config)
                 if (result.isFailure) {
                     val err = result.exceptionOrNull()?.message ?: "Unknown error"
@@ -258,8 +268,7 @@ class MainViewModel : ViewModel() {
                 }
                 val (midiBytes, _) = result.getOrThrow()
 
-                // Actually write MIDI bytes to user-accessible storage
-                // (Download/AudioToMidi/<source>_<idx>.mid)
+                // 3. Write the MIDI bytes to user-accessible storage
                 val sourceName = uri.lastPathSegment?.substringBeforeLast('.') ?: "audio"
                 val outName = "${sourceName}_${idx + 1}.mid"
                 val output = MidiStorageWriter.write(app, outName, midiBytes)

@@ -110,19 +110,16 @@
     },
     {
       "id": "folk",
-      "displayName": "Folk / Acoustic",
+      "displayName": "Folk / 直接转录（v0.2 测试）",
       "emoji": "🪕",
-      "description": "Demucs 4 源分离，专注原声吉他和人声。通常无鼓轨。",
+      "description": "测试用：不做分轨，直接用 Basic Pitch 转录整段音频出 1 条轨。其他流派（Pop/Rock 等）因 Demucs 推理未实现，目前会输出空 MIDI。等 Demucs 接通后切回 Pop/Rock 流派获取多轨输出。",
       "models": {
-        "SOURCE_SEPARATOR": "demucs_4s",
-        "VOCAL_TRANSCRIBER": "basic_pitch",
-        "GUITAR_TRANSCRIBER": "basic_pitch",
         "OTHER_TRANSCRIBER": "basic_pitch",
         "INSTRUMENT_CLASSIFIER": "yamnet"
       },
-      "maxInstruments": 6,
-      "confidenceThreshold": 0.7,
-      "minNoteDurationMs": 3000
+      "maxInstruments": 12,
+      "confidenceThreshold": 0.6,
+      "minNoteDurationMs": 100
     },
     {
       "id": "auto",
