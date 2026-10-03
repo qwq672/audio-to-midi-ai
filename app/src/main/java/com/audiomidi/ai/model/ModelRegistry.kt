@@ -4,11 +4,28 @@ import android.content.Context
 import com.audiomidi.ai.data.GenrePreset
 import com.audiomidi.ai.data.ModelAsset
 import com.audiomidi.ai.data.ModelRole
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.decodeFromJson
 import timber.log.Timber
 import java.io.IOException
+
+/**
+ * Top-level shape of manifest.json — wraps model list + version.
+ */
+@Serializable
+internal data class ManifestFile(
+    val manifestVersion: String = "0",
+    val models: List<ModelAsset> = emptyList()
+)
+
+/**
+ * Top-level shape of genre_presets.json.
+ */
+@Serializable
+internal data class GenrePresetsFile(
+    val presetsVersion: String = "0",
+    val presets: List<GenrePreset> = emptyList()
+)
 
 /**
  * Loads and parses the bundled manifest.json (in app/src/main/assets/).
@@ -44,15 +61,8 @@ class ModelRegistry(
         ) {
             try {
                 val raw = context.assets.open("manifest.json").bufferedReader().use { it.readText() }
-                val obj = json.decodeFromString<JsonObject>(raw)
-                val version = obj["manifestVersion"]?.toString()?.trim('"') ?: "0"
-                val modelsArray = obj["models"]
-                val models: List<ModelAsset> = if (modelsArray != null) {
-                    json.decodeFromJson(modelsArray)
-                } else {
-                    emptyList()
-                }
-                ModelRegistry(models, version)
+                val manifest = json.decodeFromString<ManifestFile>(raw)
+                ModelRegistry(manifest.models, manifest.manifestVersion)
             } catch (e: IOException) {
                 Timber.e(e, "Failed to load manifest.json from assets")
                 placeholder()
@@ -81,14 +91,8 @@ class GenrePresetRegistry(
         ) {
             try {
                 val raw = context.assets.open("genre_presets.json").bufferedReader().use { it.readText() }
-                val obj = json.decodeFromString<JsonObject>(raw)
-                val presetsArray = obj["presets"]
-                val list: List<GenrePreset> = if (presetsArray != null) {
-                    json.decodeFromJson(presetsArray)
-                } else {
-                    emptyList()
-                }
-                GenrePresetRegistry(list)
+                val file = json.decodeFromString<GenrePresetsFile>(raw)
+                GenrePresetRegistry(file.presets)
             } catch (e: IOException) {
                 Timber.e(e, "Failed to load genre_presets.json")
                 placeholder()

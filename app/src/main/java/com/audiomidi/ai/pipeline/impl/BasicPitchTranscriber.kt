@@ -20,10 +20,9 @@ class BasicPitchTranscriber(
 ) : Transcriber {
 
     private var session: OrtSession? = null
-    private var env: OrtEnvironment? = null
 
     override suspend fun load(modelPath: String) {
-        env = OrtEnvironment.getEnvironment()
+        val env = OrtEnvironment.getEnvironment()  // local non-null val
         val options = OrtSession.SessionOptions().apply {
             addNnapi()
             setIntraOpNumThreads(4)

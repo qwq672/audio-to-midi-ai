@@ -25,12 +25,11 @@ class DemucsSeparator(
 ) : SourceSeparator {
 
     private var session: OrtSession? = null
-    private var env: OrtEnvironment? = null
     private var numStems: Int = 4
 
     override suspend fun load(modelPath: String) {
         try {
-            env = OrtEnvironment.getEnvironment()
+            val env = OrtEnvironment.getEnvironment()  // local non-null val
 
             val options = OrtSession.SessionOptions().apply {
                 // NNAPI EP routes to Hexagon NPU on Snapdragon 8 Gen 3.
