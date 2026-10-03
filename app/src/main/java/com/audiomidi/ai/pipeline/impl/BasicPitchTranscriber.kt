@@ -31,7 +31,7 @@ class BasicPitchTranscriber(
         if (!modelFile.exists()) {
             throw java.io.FileNotFoundException("Basic Pitch model not found: $modelPath")
         }
-        session = OrtSession(env, modelFile.absolutePath, options)
+        session = env.createSession(modelFile.absolutePath, options)
         Timber.i("Basic Pitch loaded: ${modelFile.length()} bytes")
     }
 

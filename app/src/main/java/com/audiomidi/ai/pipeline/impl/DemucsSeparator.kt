@@ -43,7 +43,7 @@ class DemucsSeparator(
                 throw java.io.FileNotFoundException("Model file not found: $modelPath")
             }
 
-            session = OrtSession(env, modelFile.absolutePath, options)
+            session = env.createSession(modelFile.absolutePath, options)
             numStems = when (modelId) {
                 "demucs_6s" -> 6
                 "demucs_4s", "demucs_4s_ft" -> 4
